@@ -1,0 +1,8 @@
+context.txt
+Courier Company Agent.ipynb
+.ipynb_checkpoints/
+Python FastAPI Backend/__pycache__
+
+
+# Ignore all __pycache__ directories
+**/__pycache__/
