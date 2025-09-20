@@ -5,7 +5,7 @@ It combines **FastAPI, LangChain, and React** with an **orchestrator agent** and
 
 ---
 
-## 🎯 Use Case
+## 🎯 Use Case 
 
 - **For Customers (authenticated users):**  
   Get full access to your shipment history, statuses, delivery times, and updates with secure account-based queries.
