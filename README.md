@@ -19,9 +19,8 @@ This system is designed for courier and shipping companies that want to provide 
 
 ## 🎥 Demo
 
-👉 *(Add your MP4 demo or GIF here, for example using a GitHub asset or Loom link)*  
+https://github.com/user-attachments/assets/cc70025f-3886-46a0-a679-091f95172ac8
 
-![Demo Screenshot](demo.png)
 
 ---
 
