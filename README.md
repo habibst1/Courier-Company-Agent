@@ -1,7 +1,7 @@
 # 🚚 CourierTrack
 
 **CourierTrack** is an **AI agent courier tracking assistant** that enables customers and recipients to interact with their shipments using **natural language**.  
-It combines **FastAPI, LangChain, and React** with an **orchestrator agent** and a **SQL agent**, working together to provide real-time tracking updates and intelligent customer service in a conversational interface.
+It combines **FastAPI, LangChain, and React** with an **orchestrator agent** and a **SQL agent**, working together to provide real-time tracking updates and intelligent customer service in a conversational interface. 
 
 ---
 
