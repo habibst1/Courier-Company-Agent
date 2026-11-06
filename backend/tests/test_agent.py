@@ -164,6 +164,8 @@ async def test_long_threads_are_summarized_past_the_threshold():
     summaries = [m for m in messages if m.additional_kwargs.get("lc_source") == "summarization"]
     assert summaries and "TN4255-8215-9617" in summaries[0].text
     assert len(messages) < 6  # older turns were replaced by the summary
+    visible, summarized = await assistant.history(session)
+    assert summarized and all("summary" not in m["content"].lower() for m in visible)
 
 
 async def test_hidden_turns_are_flagged_in_the_thread():
@@ -179,3 +181,75 @@ def test_final_reply_ignores_tool_calls_and_has_a_fallback():
         == "Here you go."
     )
     assert final_reply([HumanMessage("hi")]) == FALLBACK_REPLY
+
+
+RECIPIENT = CourierContext(mode="recipient", tracking_number="TN4255-8215-9617")
+
+
+async def test_streaming_sends_a_status_then_only_the_assistants_own_tokens():
+    sql_agent = build_sql_agent(
+        scripted(
+            [
+                tool_call("run_sql", query="select count(*) as n from shipments"),
+                AIMessage("SUBAGENT-NOTES: 18 shipments."),
+            ]
+        ),
+        FakeSandbox(),
+        max_rows=50,
+    )
+    assistant, _ = make_assistant(
+        [
+            tool_call(LOOKUP_TOOL, question="How many shipments?"),
+            AIMessage("You have 18 shipments."),
+        ],
+        sql_agent,
+    )
+    events = [event async for event in assistant.stream(ChatSession("s1", CUSTOMER), "how many?")]
+
+    assert events[0] == ("status", "Checking the shipment records…")
+    assert "".join(text for kind, text in events if kind == "token") == "You have 18 shipments."
+    assert all("SUBAGENT" not in text for _, text in events)
+    assert events[-1] == ("done", "You have 18 shipments.")
+
+
+async def test_streaming_failures_raise_assistant_unavailable():
+    graph = build_assistant_graph(
+        BrokenModel(messages=iter([])),
+        None,
+        InMemorySaver(),
+        summary_trigger_tokens=4000,
+        summary_keep_messages=20,
+    )
+    with pytest.raises(AssistantUnavailable):
+        async for _ in CourierAssistant(graph).stream(ChatSession("s2", CUSTOMER), "hello"):
+            pass
+
+
+async def test_history_shows_what_the_user_saw():
+    sql_agent = build_sql_agent(
+        scripted(
+            [tool_call("run_sql", query="select status from shipments"), AIMessage("in_transit")]
+        ),
+        FakeSandbox(rows=[{"status": "in_transit"}]),
+        max_rows=50,
+    )
+    assistant, _ = make_assistant(
+        [
+            tool_call(LOOKUP_TOOL, question="What is the status of TN4255-8215-9617?"),
+            AIMessage("It's in transit to Lyon."),
+            AIMessage("You're welcome!"),
+        ],
+        sql_agent,
+    )
+    session = ChatSession("h1", RECIPIENT)
+    await assistant.reply(session, "Give updates about the tracking number", hidden=True)
+    await assistant.reply(session, "Thanks")
+
+    messages, summarized = await assistant.history(session)
+    assert messages == [
+        {"role": "assistant", "content": "It's in transit to Lyon."},
+        {"role": "user", "content": "Thanks"},
+        {"role": "assistant", "content": "You're welcome!"},
+    ]
+    assert summarized is False
+    assert await assistant.history(ChatSession("never-used", RECIPIENT)) == ([], False)

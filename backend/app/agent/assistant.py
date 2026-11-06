@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import AsyncIterator
 from datetime import date
 from weakref import WeakValueDictionary
 
@@ -32,6 +33,9 @@ logger = logging.getLogger("courier.assistant")
 LOOKUP_TOOL = "ask_shipment_database"
 HIDDEN_FLAG = "courier_hidden"
 FALLBACK_REPLY = "Sorry, I couldn't put an answer together. Could you rephrase your question?"
+LOOKUP_STATUS = "Checking the shipment records…"
+UNAVAILABLE_MESSAGE = "The assistant is unavailable right now. Please try again in a moment."
+SUMMARY_SOURCE = "summarization"  # how SummarizationMiddleware marks its summary message
 
 
 class AssistantUnavailable(RuntimeError):
@@ -56,6 +60,7 @@ def build_assistant_graph(
             question: One complete, standalone question in English, including any tracking
                 numbers, cities or dates from the conversation that it depends on.
         """
+        runtime.stream_writer({"status": LOOKUP_STATUS})
         try:
             result = await sql_agent.ainvoke(
                 {"messages": [HumanMessage(question)]}, context=runtime.context
@@ -138,3 +143,56 @@ class CourierAssistant:
                 logger.exception("Assistant run failed (thread %s)", session.thread_id[:8])
                 raise AssistantUnavailable from exc
         return final_reply(result["messages"])
+
+    async def stream(
+        self, session: ChatSession, text: str, *, hidden: bool = False
+    ) -> AsyncIterator[tuple[str, str]]:
+        """Yield ("status", text) and ("token", text) events, then ("done", full reply).
+
+        Only the assistant's own model tokens are streamed. LangGraph keeps the SQL sub-agent's
+        tokens (a nested graph) and the summarizer's (another node) out of the "messages" stream.
+        """
+        config = self.config(session)
+        async with self.thread_lock(session.thread_id):
+            try:
+                async for mode, payload in self.graph.astream(
+                    {"messages": [user_message(text, hidden=hidden)]},
+                    config,
+                    context=session.context,
+                    stream_mode=["messages", "custom"],
+                ):
+                    if mode == "custom":
+                        if isinstance(payload, dict) and payload.get("status"):
+                            yield "status", str(payload["status"])
+                        continue
+                    chunk, metadata = payload
+                    if (
+                        metadata.get("langgraph_node") == "model"
+                        and isinstance(chunk, AIMessage)
+                        and chunk.text
+                    ):
+                        yield "token", chunk.text
+                state = await self.graph.aget_state(config)
+            except Exception as exc:
+                logger.exception("Assistant stream failed (thread %s)", session.thread_id[:8])
+                raise AssistantUnavailable from exc
+        yield "done", final_reply(state.values["messages"])
+
+    async def history(self, session: ChatSession) -> tuple[list[dict[str, str]], bool]:
+        """The visible turns of a conversation, and whether older ones were summarized away."""
+        try:
+            state = await self.graph.aget_state(self.config(session))
+        except Exception as exc:
+            logger.exception("Could not load thread %s", session.thread_id[:8])
+            raise AssistantUnavailable from exc
+        visible: list[dict[str, str]] = []
+        summarized = False
+        for message in (state.values or {}).get("messages", []):
+            if isinstance(message, HumanMessage):
+                if message.additional_kwargs.get("lc_source") == SUMMARY_SOURCE:
+                    summarized = True
+                elif not message.additional_kwargs.get(HIDDEN_FLAG):
+                    visible.append({"role": "user", "content": message.text})
+            elif isinstance(message, AIMessage) and not message.tool_calls and message.text.strip():
+                visible.append({"role": "assistant", "content": message.text.strip()})
+        return visible, summarized

@@ -1,7 +1,15 @@
 import pytest
 
 from app.agent.context import CourierContext
-from app.security import ChatSession, InvalidToken, SessionTokens
+from app.security import (
+    ChatSession,
+    Customer,
+    InvalidToken,
+    LoginTokens,
+    SessionTokens,
+    hash_password,
+    verify_password,
+)
 
 TOKENS = SessionTokens("x" * 40, max_age_hours=1)
 RECIPIENT = ChatSession(
@@ -52,3 +60,21 @@ def test_garbage_is_rejected():
 def test_context_rejects_mixed_or_missing_scopes(kwargs):
     with pytest.raises(ValueError):
         CourierContext(**kwargs)
+
+
+async def test_passwords_verify_only_with_the_right_secret():
+    stored = hash_password("s3cret-demo")
+    assert await verify_password(stored, "s3cret-demo")
+    assert not await verify_password(stored, "S3cret-demo")
+    assert not await verify_password(None, "anything")  # unknown user
+    assert not await verify_password("not-a-hash", "anything")
+
+
+def test_login_and_session_tokens_are_not_interchangeable():
+    logins = LoginTokens("x" * 40, max_age_hours=1)
+    customer = Customer(user_id=1, username="habib_bencheikhali", full_name="Habib")
+    assert logins.read(logins.issue(customer)) == customer
+    with pytest.raises(InvalidToken):
+        logins.read(TOKENS.issue(RECIPIENT))
+    with pytest.raises(InvalidToken):
+        TOKENS.read(logins.issue(customer))

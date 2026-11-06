@@ -14,7 +14,7 @@ from .agent.models import make_chat_model
 from .agent.sql_agent import build_sql_agent
 from .config import Settings
 from .database import Database
-from .security import SessionTokens
+from .security import LoginTokens, SessionTokens
 
 
 @dataclass
@@ -22,6 +22,7 @@ class Services:
     settings: Settings
     db: Database
     tokens: SessionTokens
+    logins: LoginTokens
     assistant: CourierAssistant
 
 
@@ -53,6 +54,9 @@ async def build_services(settings: Settings) -> AsyncIterator[Services]:
             db=db,
             tokens=SessionTokens(
                 settings.session_secret.get_secret_value(), settings.session_max_age_hours
+            ),
+            logins=LoginTokens(
+                settings.session_secret.get_secret_value(), settings.login_max_age_hours
             ),
             assistant=CourierAssistant(graph),
         )

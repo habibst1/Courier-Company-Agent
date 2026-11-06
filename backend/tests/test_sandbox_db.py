@@ -93,3 +93,19 @@ async def test_lookups_used_by_the_api(database):
     assert profile["username"] == "habib_bencheikhali"
     assert profile["email"] == "habib.bencheikh@email.com"  # trailing newlines trimmed by the view
     assert await database.customer_profile(999_999) is None
+
+
+async def test_demo_logins_were_seeded(database):
+    from app.config import BACKEND_DIR
+    from app.security import verify_password
+
+    env = dict(
+        line.split("=", 1)
+        for line in (BACKEND_DIR / ".env").read_text(encoding="utf-8").splitlines()
+        if "=" in line and not line.startswith("#")
+    )
+    row = await database.find_login("HABIB_BENCHEIKHALI")
+    assert row["user_id"] == 1 and row["password_hash"].startswith("$argon2")
+    assert await verify_password(row["password_hash"], env["DEMO_PASSWORD"])
+    assert await database.find_login("habib.bencheikh@email.com") is not None
+    assert await database.find_login("nobody-by-this-name") is None

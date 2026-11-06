@@ -29,10 +29,10 @@ class Settings(BaseSettings):
     sql_timeout_seconds: float = Field(8.0, gt=0)
     sql_max_rows: int = Field(50, ge=1, le=500)
 
-    # Sessions
+    # Logins and chat sessions
     session_secret: SecretStr
     session_max_age_hours: int = Field(24, ge=1)
-    demo_customer_id: int = 1
+    login_max_age_hours: int = Field(12, ge=1)
 
     # Conversation memory
     checkpointer: Literal["postgres", "memory"] = "postgres"

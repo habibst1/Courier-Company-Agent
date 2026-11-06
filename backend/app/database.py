@@ -144,6 +144,16 @@ class Database:
         )
         return result.rows[0] if result.rows else None
 
+    async def find_login(self, identifier: str) -> dict[str, Any] | None:
+        """The login row for a user name or e-mail address (case-insensitive), if any."""
+        async with self.app_pool.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT user_id, username, full_name, password_hash FROM auth.login_lookup "
+                "WHERE lower(username) = lower(%s) OR lower(email) = lower(%s) LIMIT 1",
+                (identifier, identifier),
+            )
+            return await cursor.fetchone()
+
     async def _bind(self, pid: int, scope: CourierContext) -> None:
         async with self.app_pool.connection() as conn:
             await conn.execute(_BIND_SCOPE, (pid, scope.mode, scope.user_id, scope.tracking_number))

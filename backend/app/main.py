@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .agent.assistant import AssistantUnavailable
+from .agent.assistant import UNAVAILABLE_MESSAGE, AssistantUnavailable
 from .api import router
 from .config import Settings, get_settings
 from .services import Services, build_services
@@ -48,9 +48,6 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
 
     @app.exception_handler(AssistantUnavailable)
     async def assistant_unavailable(_: Request, __: AssistantUnavailable) -> JSONResponse:
-        return JSONResponse(
-            {"detail": "The assistant is unavailable right now. Please try again in a moment."},
-            status_code=503,
-        )
+        return JSONResponse({"detail": UNAVAILABLE_MESSAGE}, status_code=503)
 
     return app
