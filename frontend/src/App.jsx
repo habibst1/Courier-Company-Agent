@@ -1,13 +1,23 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
-import HomePage from './pages/HomePage';
-import AuthenticatedChat from './pages/AuthenticatedChat';
 import AnonymousChat from './pages/AnonymousChat';
+import AuthenticatedChat from './pages/AuthenticatedChat';
+import HomePage from './pages/HomePage';
 
-function App() {
+function NotFound() {
   return (
-    <Router>
+    <div className="mx-auto max-w-3xl px-4 py-24 text-center">
+      <h1 className="mb-4 text-3xl font-bold text-gray-900">Page not found</h1>
+      <Link to="/" className="font-medium text-primary-600 hover:text-primary-700">
+        Back to the home page
+      </Link>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
       <div className="min-h-screen bg-gray-50">
         <Header />
         <main>
@@ -15,11 +25,10 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/authenticated" element={<AuthenticatedChat />} />
             <Route path="/anonymous" element={<AnonymousChat />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
       </div>
-    </Router>
+    </BrowserRouter>
   );
 }
-
-export default App;

@@ -23,7 +23,8 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // ignoreRestSiblings: `({ node, ...props })` deliberately drops `node` before spreading.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', ignoreRestSiblings: true }],
     },
   },
 ])

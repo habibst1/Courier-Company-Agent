@@ -1,37 +1,45 @@
-// src/components/TrackingForm.jsx
-import React from 'react';
+import { useState } from 'react';
 
-const TrackingForm = ({ trackingNumber, setTrackingNumber, onTrack, placeholder }) => {
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (trackingNumber.trim()) {
-      onTrack(trackingNumber.trim());
-    }
+export default function TrackingForm({ onTrack, busy = false, error, initialValue = '' }) {
+  const [value, setValue] = useState(initialValue);
+
+  const submit = (event) => {
+    event.preventDefault();
+    const trackingNumber = value.trim();
+    if (trackingNumber && !busy) onTrack(trackingNumber);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6">
+    <form onSubmit={submit} className="mx-auto max-w-md">
+      <label htmlFor="tracking-number" className="sr-only">
+        Tracking number
+      </label>
       <div className="flex">
-        {/* Input Field - Updated focus ring to Aramex Red */}
         <input
+          id="tracking-number"
           type="text"
-          value={trackingNumber}
-          onChange={(e) => setTrackingNumber(e.target.value)}
-          placeholder={placeholder}
-          // Changed focus:ring-primary-500 to focus:ring-red-500
-          className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          placeholder="e.g. TN4255-8215-9617"
+          autoComplete="off"
+          spellCheck="false"
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? 'tracking-error' : undefined}
+          className="min-w-0 flex-1 rounded-l-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
-        {/* Track Button - Updated to Aramex Red Theme */}
         <button
           type="submit"
-          // Changed bg-primary-600 to bg-red-600 and hover:bg-primary-700 to hover:bg-red-700
-          className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-r-lg font-medium transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          disabled={busy || !value.trim()}
+          className="rounded-r-lg bg-primary-600 px-6 py-3 font-medium text-white transition hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:bg-gray-300"
         >
-          Track
+          {busy ? 'Checking…' : 'Track'}
         </button>
       </div>
+      {error && (
+        <p id="tracking-error" role="alert" className="mt-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
     </form>
   );
-};
-
-export default TrackingForm;
+}

@@ -1,12 +1,20 @@
-# React + Vite
+# CourierTrack frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite + Tailwind CSS. It talks to the FastAPI backend in `../backend`.
 
-Currently, two official plugins are available:
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run lint
+npm run build
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The backend URL defaults to `http://localhost:8000`. To change it, copy `.env.example` to
+`.env.local` and set `VITE_API_URL`.
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Path | What it does |
+| --- | --- |
+| `src/api.js` | Every backend call, including the streaming reader for `/api/chat/stream` |
+| `src/hooks/useChat.js` | Chat state: messages, streaming text, status line, history loading |
+| `src/storage.js` | Keeps tokens and the current chat in `sessionStorage` so a reload resumes it |
+| `src/pages/` | Home, Customer Service (sign-in required) and Anonymous Tracking |
