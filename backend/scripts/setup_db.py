@@ -6,7 +6,8 @@ What it does, in order (safe to run again):
   3. Applies db/sandbox.sql, db/auth.sql and db/checkpoints.sql.
   4. Gives every customer without a login the DEMO_PASSWORD (--reset-passwords: everyone).
 
-Usage (from backend/):  .venv/Scripts/python scripts/setup_db.py   (or .venv/bin/python on macOS/Linux)
+Usage, from backend/ with the virtualenv active:
+    python scripts/setup_db.py [--reset-passwords]
 """
 
 from __future__ import annotations
@@ -80,7 +81,9 @@ def set_role_options(conn: psycopg.Connection, role: str, database: str, options
     for name, value in options.items():
         conn.execute(
             sql.SQL("ALTER ROLE {} IN DATABASE {} SET {} = {}").format(
-                sql.Identifier(role), sql.Identifier(database), sql.Identifier(name),
+                sql.Identifier(role),
+                sql.Identifier(database),
+                sql.Identifier(name),
                 sql.Literal(value),
             )
         )
@@ -106,7 +109,8 @@ def seed_demo_passwords(admin_url: str, password: str, reset: bool) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
-        "--reset-passwords", action="store_true",
+        "--reset-passwords",
+        action="store_true",
         help="give every customer the current DEMO_PASSWORD, not only those without a login",
     )
     args = parser.parse_args()
@@ -133,13 +137,18 @@ def main() -> None:
         ensure_role(conn, AGENT_ROLE, agent_password, database)
         ensure_role(conn, APP_ROLE, app_password, database)
         # Guards on every sandbox session. The app also opens each query READ ONLY.
-        set_role_options(conn, AGENT_ROLE, database, {
-            "search_path": "agent",
-            "default_transaction_read_only": "on",
-            "statement_timeout": "5s",
-            "idle_in_transaction_session_timeout": "15s",
-            "lc_messages": "C",  # English errors, which the SQL sub-agent reads to fix queries
-        })
+        set_role_options(
+            conn,
+            AGENT_ROLE,
+            database,
+            {
+                "search_path": "agent",
+                "default_transaction_read_only": "on",
+                "statement_timeout": "5s",
+                "idle_in_transaction_session_timeout": "15s",
+                "lc_messages": "C",  # English errors, which the SQL sub-agent reads to fix queries
+            },
+        )
         set_role_options(conn, APP_ROLE, database, {"search_path": "checkpoints"})
 
     for name in ("sandbox.sql", "auth.sql", "checkpoints.sql"):
@@ -149,7 +158,9 @@ def main() -> None:
         admin_url, settings.demo_password.get_secret_value(), args.reset_passwords
     )
     print(f"  demo password set for {count} customer(s)")
-    print("Done. Customers sign in with their username (e.g. habib_bencheikhali) and DEMO_PASSWORD.")
+    print(
+        "Done. Customers sign in with their username (e.g. habib_bencheikhali) and DEMO_PASSWORD."
+    )
 
 
 if __name__ == "__main__":
