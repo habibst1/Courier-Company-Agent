@@ -1,8 +1,27 @@
-context.txt
-Courier Company Agent.ipynb
+# Secrets: only the example files are committed
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Frontend dependencies and builds (frontend/.gitignore covers the rest)
+node_modules/
+frontend/dist/
+
+# Local-only material
+Demo/
 .ipynb_checkpoints/
-Python FastAPI Backend/__pycache__
 
-
-# Ignore all __pycache__ directories
-**/__pycache__/
+# Editors and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
